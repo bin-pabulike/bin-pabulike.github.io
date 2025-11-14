@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能题库系统</title>
+    <!-- 引入marked.js用于markdown解析 -->
+    <script src="./static/third_part/marked.min.js"></script>
+    <!-- 引入KaTeX用于数学公式渲染 - 更新到最新稳定版本 -->
+    <link rel="stylesheet" href="./static/third_part/katex.min.css">
+    <script src="./static/third_part/katex.min.js"></script>
+    <script src="./static/third_part/auto-render.min.js"></script>
+    
+    <!-- 引入Prism.js用于代码语法高亮 -->
+    <link rel="stylesheet" href="./static/third_part/prism.css">
+    <script src="./static/third_part/prism.min.js"></script>
+    
+    <!-- 自定义代码高亮样式 -->
+    <style>
+        .markdown-academic ul {
+            padding-left: 20px;
+        }
+
+        .markdown-academic ol {
+            padding-left: 16px;
+        }
+
+        /* 增强代码块样式 */
+        .question-content pre[class*="language-"] {
+            border-radius: 8px;
+            border-left: 4px solid #4a90e2;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            margin: 1.5rem 0;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .question-content pre[class*="language-"]::before {
+            content: attr(class);
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: #4a90e2;
+            color: white;
+            padding: 0.25rem 0.75rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border-bottom-left-radius: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .question-content code[class*="language-"] {
+            font-size: 0.9rem;
+            line-height: 1.5;
+            padding: 1.5rem !important;
+        }
+        
+        /* 行号样式 */
+        .question-content pre[class*="language-"].line-numbers {
+            padding-left: 3.8rem;
+        }
+        
+        .question-content .line-numbers-rows {
+            border-right: 1px solid #e1e8ed;
+            background: #f8f9fa;
+        }
+        
+        .question-content .line-numbers-rows > span:before {
+            color: #6c757d;
+            font-weight: 400;
+        }
+        
+        /* 代码块标题栏 */
+        .code-block-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #e1e8ed;
+            padding: 0.75rem 1rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #495057;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .code-block-header .language-label {
+            background: #4a90e2;
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        
+        .code-block-header .copy-button {
+            background: transparent;
+            border: 1px solid #dee2e6;
+            color: #6c757d;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .code-block-header .copy-button:hover {
+            background: #4a90e2;
+            color: white;
+            border-color: #4a90e2;
+        }
+        
+        /* 代码块容器 */
+        .code-block-container {
+            border-radius: 8px;
+            border: 1px solid #e1e8ed;
+            margin: 1.5rem 0;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+        
+        /* 响应式调整 */
+        @media (max-width: 768px) {
+            .question-content pre[class*="language-"] {
+                margin: 1rem 0;
+                border-radius: 6px;
+            }
+            
+            .question-content code[class*="language-"] {
+                font-size: 0.85rem;
+                padding: 1rem !important;
+            }
+            
+            .code-block-container {
+                margin: 1rem 0;
+            }
+        }
+        
+        /* 语法高亮颜色增强 */
+        .token.comment,
+        .token.prolog,
+        .token.doctype,
+        .token.cdata {
+            color: #6a9955;
+            font-style: italic;
+        }
+        
+        .token.keyword,
+        .token.operator {
+            color: #d73a49;
+            font-weight: 600;
+        }
+        
+        .token.string,
+        .token.char,
+        .token.attr-value {
+            color: #032f62;
+        }
+        
+        .token.number,
+        .token.boolean {
+            color: #005cc5;
+        }
+        
+        .token.function,
+        .token.class-name {
+            color: #6f42c1;
+        }
+        
+        .token.variable {
+            color: #e36209;
+        }
+        
+        .token.punctuation {
+            color: #24292e;
+        }
+        
+        .token.selector {
+            color: #22863a;
+        }
+        
+        .token.property {
+            color: #005cc5;
+        }
+    </style>
+    
+    <script>
+        // 复制代码到剪贴板功能
+        function copyCodeToClipboard(button) {
+            const codeBlock = button.closest('.code-block-container').querySelector('code');
+            const codeText = codeBlock.textContent || codeBlock.innerText;
+            
+            navigator.clipboard.writeText(codeText).then(function() {
+                // 复制成功，更新按钮文本
+                const originalText = button.innerHTML;
+                button.innerHTML = '✅ 已复制';
+                button.style.background = '#28a745';
+                button.style.color = 'white';
+                button.style.borderColor = '#28a745';
+                
+                // 2秒后恢复原状
+                setTimeout(function() {
+                    button.innerHTML = originalText;
+                    button.style.background = 'transparent';
+                    button.style.color = '#6c757d';
+                    button.style.borderColor = '#dee2e6';
+                }, 2000);
+                
+            }).catch(function(err) {
+                console.error('复制失败:', err);
+                button.innerHTML = '❌ 复制失败';
+                button.style.background = '#dc3545';
+                button.style.color = 'white';
+                button.style.borderColor = '#dc3545';
+                
+                setTimeout(function() {
+                    button.innerHTML = '📋 复制';
+                    button.style.background = 'transparent';
+                    button.style.color = '#6c757d';
+                    button.style.borderColor = '#dee2e6';
+                }, 2000);
+            });
+        }
+    </script>
+
+    <!-- 公式渲染测试和初始化脚本 -->
+    <script>
+        // 页面加载完成后初始化公式渲染
+        document.addEventListener('DOMContentLoaded', function() {
+            console.debug('页面加载完成，准备初始化KaTeX');
+            // 延迟一下以确保所有资源都已加载
+            setTimeout(function() {
+                console.debug('检查KaTeX是否可用:', typeof renderMathInElement !== 'undefined');
+            }, 1000);
+        });
+
+        // 手动测试公式渲染的函数
+        function testMathRendering() {
+            console.debug('手动测试公式渲染');
+            const testDiv = document.createElement('div');
+            testDiv.innerHTML = '测试公式: $E=mc^2$ 和 $$\\sum_{i=1}^{n} i = \\frac{n(n+1)}{2}$$';
+            testDiv.style.position = 'fixed';
+            testDiv.style.bottom = '20px';
+            testDiv.style.right = '20px';
+            testDiv.style.background = 'white';
+            testDiv.style.padding = '10px';
+            testDiv.style.border = '1px solid #ccc';
+            testDiv.id = 'testMathElement';
+            document.body.appendChild(testDiv);
+
+            if (window.renderMathInElement) {
+                renderMathInElement(testDiv, {
+                    delimiters: [
+                        {left: '$$', right: '$$', display: true},
+                        {left: '$', right: '$', display: false}
+                    ],
+                    throwOnError: false
+                });
+                console.log('测试公式渲染完成');
+            } else {
+                console.error('KaTeX未加载');
+            }
+        }
+    </script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #4a90e2;
+            --success-color: #52c41a;
+            --error-color: #f5222d;
+            --warning-color: #faad14;
+            --bg-color: #f0f2f5;
+            --card-bg: #ffffff;
+            --text-primary: #262626;
+            --text-secondary: #8c8c8c;
+            --border-color: #d9d9d9;
+            --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            --shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: var(--bg-color);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        /* 顶部导航栏 */
+        .top-nav {
+            background: var(--card-bg);
+            box-shadow: var(--shadow);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            padding: 1rem 2rem;
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .nav-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .nav-controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        /* 按钮样式 */
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #3a7bc8;
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        .btn-success {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #4caf50;
+        }
+
+        /* 模态框背景样式 */
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        /* 考试模板对话框样式 */
+        .exam-template-dialog {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 2rem;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow);
+        }
+
+        .exam-template-dialog h3 {
+            margin-top: 0;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+        }
+
+        .template-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .template-item {
+            padding: 1rem;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .template-item:hover {
+            border-color: var(--primary-color);
+            background: #f0f8ff;
+            transform: translateX(5px);
+        }
+
+        .template-name {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 0.25rem;
+            color: var(--text-primary);
+        }
+
+        .template-desc {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .dialog-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .btn-warning {
+            background: var(--warning-color);
+            color: white;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+
+        .btn-outline:hover {
+            background: var(--bg-color);
+        }
+
+        .btn.active {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        /* 主容器 */
+        .main-container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        /* 题目导航栏 */
+        .question-nav {
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow);
+        }
+
+        .nav-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .question-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+            gap: 0.5rem;
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 0.5rem;
+            background: var(--bg-color);
+            border-radius: 6px;
+        }
+
+        .question-item {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            border: 1px solid var(--border-color);
+            background: white;
+        }
+
+        .question-item:hover {
+            transform: scale(1.1);
+            box-shadow: var(--shadow);
+        }
+
+        .question-item.current {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .question-item.correct {
+            background: var(--success-color);
+            color: white;
+            border-color: var(--success-color);
+        }
+
+        .question-item.incorrect {
+            background: var(--error-color);
+            color: white;
+            border-color: var(--error-color);
+        }
+
+        .question-item.pending {
+            background: var(--warning-color);
+            color: white;
+            border-color: var(--warning-color);
+        }
+
+        /* 题目卡片 */
+        .question-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 2rem 3rem;
+            box-shadow: var(--shadow);
+            margin-bottom: 2rem;
+        }
+
+        .question-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--bg-color);
+        }
+
+        .question-type {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .type-single {
+            background: #e6f7ff;
+            color: #1890ff;
+        }
+
+        .type-multiple {
+            background: #f6ffed;
+            color: #52c41a;
+        }
+
+        .question-text {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            line-height: 1.8;
+        }
+
+        .question-text .translation {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+            padding-top: 0.5rem;
+            border-top: 1px dashed var(--border-color);
+        }
+
+        /* 选项样式 */
+        .options-container {
+            margin-bottom: 2rem;
+        }
+
+        .option-item {
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .option-item:hover {
+            border-color: var(--primary-color);
+            background: #f0f8ff;
+            transform: translateX(5px);
+        }
+
+        .option-item.selected {
+            border-color: var(--primary-color);
+            background: #e6f7ff;
+        }
+
+        .option-item.correct {
+            border-color: var(--success-color);
+            background: #f6ffed;
+        }
+
+        .option-item.incorrect {
+            border-color: var(--error-color);
+            background: #fff2f0;
+        }
+
+        .option-item.missed {
+            border-color: #faad14;
+            background: #fffbe6;
+        }
+
+        .option-checkbox {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border-color);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .option-item.selected .option-checkbox {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .option-item.selected .option-checkbox::after {
+            content: '✓';
+            color: white;
+            font-weight: bold;
+        }
+
+        .option-item.correct .option-checkbox {
+            background: var(--success-color);
+            border-color: var(--success-color);
+        }
+
+        .option-item.correct .option-checkbox::after {
+            content: '✓';
+            color: white;
+            font-weight: bold;
+        }
+
+        .option-item.incorrect .option-checkbox {
+            background: var(--error-color);
+            border-color: var(--error-color);
+        }
+
+        .option-item.incorrect .option-checkbox::after {
+            content: '✗';
+            color: white;
+            font-weight: bold;
+        }
+
+        .option-item.missed .option-checkbox {
+            background: #faad14;
+            border-color: #faad14;
+        }
+
+        .option-item.missed .option-checkbox::after {
+            content: '✓';
+            color: white;
+            font-weight: bold;
+        }
+
+        .option-text {
+            flex: 1;
+        }
+
+        .option-text .translation {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin-top: 0.25rem;
+        }
+
+        /* 解析区域 */
+        .analysis-section {
+            background: #f9f9f9;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-top: 2rem;
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .analysis-title {
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            color: var(--primary-color);
+        }
+
+        .analysis-content {
+            line-height: 1.8;
+        }
+
+        .analysis-content .translation {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+            padding-top: 0.5rem;
+            border-top: 1px dashed var(--border-color);
+        }
+
+        /* 操作按钮 */
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 2rem;
+        }
+
+        /* 统计信息 */
+        .stats-panel {
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 1rem;
+            background: var(--bg-color);
+            border-radius: 8px;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-top: 0.25rem;
+        }
+
+        /* 重置按钮容器 */
+        .reset-container {
+            margin-top: 1rem;
+            text-align: center;
+        }
+
+        /* 设置面板 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 2rem;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-body {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+        }
+
+        .setting-item label {
+            font-weight: 500;
+        }
+
+        .setting-item select, .setting-item input {
+            padding: 0.5rem;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+
+        /* 加载动画 */
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 200px;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid var(--border-color);
+            border-top-color: var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* 提示信息 */
+        .toast {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            display: none;
+            z-index: 2000;
+        }
+
+        .toast.show {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -60%);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%);
+            }
+        }
+
+        /* 设置面板关闭按钮样式 */
+        .close-btn {
+            background: var(--bg-color);
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            color: var(--text-secondary);
+        }
+
+        .close-btn:hover {
+            background: var(--error-color);
+            color: white;
+            transform: rotate(90deg);
+        }
+
+        /* 自定义复选框样式 */
+        .setting-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            appearance: none;
+            -webkit-appearance: none;
+            background: white;
+            border: 2px solid var(--border-color);
+            border-radius: 4px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .setting-item input[type="checkbox"]:checked {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .setting-item input[type="checkbox"]:checked::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .setting-item input[type="checkbox"]:hover {
+            border-color: var(--primary-color);
+        }
+
+        /* 自定义下拉选择框样式 */
+        .setting-item select {
+            cursor: pointer;
+            background: white;
+            min-width: 150px;
+            transition: all 0.3s ease;
+        }
+
+        .setting-item select:hover {
+            border-color: var(--primary-color);
+        }
+
+        .setting-item select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
+        }
+
+        /* 模式选择器样式 */
+        .mode-selector {
+            position: relative;
+            display: inline-block;
+        }
+
+        .mode-selector select {
+            cursor: pointer;
+            background: var(--card-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            min-width: 150px;
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238c8c8c' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.7rem center;
+            background-size: 16px;
+            padding-right: 2.5rem;
+        }
+
+        .mode-selector select:hover {
+            border-color: var(--primary-color);
+            background-color: #f8f9fa;
+        }
+
+        .mode-selector select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
+        }
+
+        .mode-selector select option {
+            padding: 0.5rem;
+        }
+
+        /* 考试计时器样式 */
+        .exam-timer {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            background: var(--primary-color);
+            color: white;
+            border-radius: 8px;
+            font-weight: bold;
+            margin-left: 1rem;
+            white-space: nowrap;
+        }
+
+        /* Markdown表格样式 */
+        .question-text table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            font-size: 0.95rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .question-text table th,
+        .question-text table td {
+            border: 1px solid var(--border-color);
+            padding: 0.75rem;
+            text-align: left;
+            vertical-align: top;
+        }
+
+        .question-text table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: var(--text-primary);
+            border-bottom: 2px solid var(--primary-color);
+        }
+
+        .question-text table tr:nth-child(even) {
+            background-color: #fafafa;
+        }
+
+        .question-text table tr:hover {
+            background-color: #f0f8ff;
+        }
+
+        .question-text table td:first-child,
+        .question-text table th:first-child {
+            border-left: 2px solid var(--primary-color);
+        }
+
+        .question-text table td:last-child,
+        .question-text table th:last-child {
+            border-right: 2px solid var(--primary-color);
+        }
+
+        .question-text table tr:last-child td {
+            border-bottom: 2px solid var(--primary-color);
+        }
+
+        /* 响应式表格 */
+        @media (max-width: 768px) {
+            .question-text table {
+                font-size: 0.85rem;
+            }
+
+            .question-text table th,
+            .question-text table td {
+                padding: 0.5rem;
+            }
+
+            .nav-container {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .nav-controls {
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+
+            .exam-timer {
+                margin-left: 0;
+                margin-top: 0.5rem;
+                font-size: 0.9rem;
+                padding: 0.3rem 0.8rem;
+            }
+
+            .question-grid {
+                grid-template-columns: repeat(auto-fill, minmax(35px, 1fr));
+            }
+
+            .question-item {
+                width: 35px;
+                height: 35px;
+                font-size: 0.8rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+<!-- 顶部导航栏 -->
+<nav class="top-nav">
+    <div class="nav-container">
+        <div class="nav-title">📚 智能题库系统</div>
+        <div class="nav-controls">
+            <button class="btn btn-outline" id="settingsBtn" onclick="toggleSettings()">
+                ⚙️ 设置
+            </button>
+            <button class="btn btn-outline" onclick="toggleLanguage()">
+                🌐 <span id="langText">中/EN</span>
+            </button>
+            <div class="mode-selector">
+                <select class="btn btn-outline" id="modeSelect" onchange="changeMode()">
+                    <option value="practice">✏️ 练习模式</option>
+                    <option value="study">📖 背题模式</option>
+                </select>
+            </div>
+            <button class="btn btn-success" id="examBtn" onclick="openExamTemplateDialog()">
+                📝 开始考试
+            </button>
+        </div>
+    </div>
+</nav>
+
+<!-- 主容器 -->
+<div class="main-container">
+    <!-- 统计面板 -->
+    <div class="stats-panel" id="statsPanel">
+        <div class="stats-grid">
+            <div class="stat-item">
+                <div class="stat-value" id="totalQuestions">0</div>
+                <div class="stat-label">总题数</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="answeredQuestions">0</div>
+                <div class="stat-label">已答题</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="correctQuestions">0</div>
+                <div class="stat-label">正确数</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="accuracy">0%</div>
+                <div class="stat-label">正确率</div>
+            </div>
+        </div>
+        <div class="reset-container">
+            <button class="btn btn-outline" id="resetBtn" onclick="resetPractice()">
+                🔄 重置练习状态
+            </button>
+        </div>
+    </div>
+
+    <!-- 题目导航栏 -->
+    <div class="question-nav">
+        <div class="nav-info">
+            <span>题库: <strong id="currentBank">未加载</strong></span>
+            <span>当前题目: <strong id="currentQuestion">0</strong> / <strong id="totalQuestionsNav">0</strong></span>
+            <span id="currentModeDisplay">当前模式: ✏️ 练习模式</span>
+        </div>
+        <div class="question-grid" id="questionGrid">
+            <!-- 题目导航将动态生成 -->
+        </div>
+    </div>
+
+    <!-- 题目卡片 -->
+    <div class="question-card" id="questionCard">
+        <div class="loading" id="loadingIndicator">
+            <div class="spinner"></div>
+        </div>
+        <div id="questionContent" style="display: none;">
+            <!-- 题目内容将动态生成 -->
+        </div>
+    </div>
+</div>
+
+<!-- 设置面板 -->
+<div id="settingsModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>⚙️ 设置</h3>
+            <button class="close-btn" onclick="toggleSettings()">×</button>
+        </div>
+        <div class="modal-body">
+            <div class="setting-item">
+                <label for="bankSelect">📚 选择题库:</label>
+                <select id="bankSelect" onchange="loadBank()">
+                    <option value="general">综合题库</option>
+                    <option value="acp_ai_pro_single">ACP 人工智能高级(单选题)</option>
+                    <option value="acp_ai_pro_multi">ACP 人工智能高级(多选题)</option>
+                    <option value="aws_mls_c01_all_deepseek">AWS-MLS(C01) DeepSeek</option>
+                    <option value="aws_mls_c01_all">AWS-MLS(C01) ALL</option>
+                    <option value="aws_mls_c01_all_doubao">AWS-MLS(C01) DouBao</option>
+                    <option value="acp_ai_pro_single_example">ACP 人工智能高级(单选题) Example</option>
+                    <option value="aws_mls_c01_example">AWS-MLS(C01) Example</option>
+                    <option value="acp_ai_pro_errors">ACP 人工智能高级(错题集)</option>
+                    <option value="acp_ai_pro_numbers">ACP 人工智能高级(数字)</option>
+                </select>
+            </div>
+            <div class="setting-item">
+                <label for="showTranslation">🌐 显示翻译:</label>
+                <input type="checkbox" id="showTranslation" checked onchange="updateDisplay()">
+            </div>
+            <div class="setting-item">
+                <label for="autoNext">⏭️ 自动下一题:</label>
+                <input type="checkbox" id="autoNext" onchange="updateSettings()">
+            </div>
+            <div class="setting-item">
+                <label for="autoSubmitSingle">🚀 自动提交单选题答案:</label>
+                <input type="checkbox" id="autoSubmitSingle" onchange="updateAutoSubmitSingle()">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 提示信息 -->
+<div class="toast" id="toast"></div>
+
+<!-- 模块化JavaScript文件 -->
+<script type="module" src="./src/app.js"></script>
+</body>
+</html>

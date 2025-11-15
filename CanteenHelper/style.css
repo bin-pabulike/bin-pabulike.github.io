@@ -284,6 +284,45 @@ body.loaded {
     background: linear-gradient(135deg, #fffbe6 0%, #fff 100%);
 }
 
+/* 罗大壮餐厅卡片样式 */
+.luo-dazhuang-card {
+    border: 2px solid #A67C52;
+    overflow: visible;
+}
+
+.luo-dazhuang-card:hover {
+    transform: translateY(-5px) scale(1.03);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+.luo-dazhuang-content {
+    width: 100%;
+    height: 100%;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.luo-dazhuang-header {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.luo-dazhuang-left {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.luo-dazhuang-qrcode {
+    background: white;
+    padding: 10px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
 .table-image {
     width: 100%;
     height: 180px;
@@ -346,10 +385,9 @@ body.loaded {
         width: 100%; /* 移动端不需要宽度变化 */
     }
     
-    .table-grid {
+    /* 统一餐厅的网格布局 */
+    .table-grid { 
         grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-        gap: 12px;
-        padding-bottom: 20px;
     }
     
     .table-image {
@@ -363,6 +401,17 @@ body.loaded {
     .table-number {
         font-size: 13px;
     }
+    
+    /* 罗大壮餐厅卡片在平板上的调整 */
+    .luo-dazhuang-header {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .luo-dazhuang-qrcode img {
+        width: 120px !important;
+        height: 120px !important;
+    }
 }
 
 /* 大屏手机 */
@@ -375,6 +424,7 @@ body.loaded {
         font-size: 22px;
     }
     
+    /* 统一餐厅的网格布局 */
     .table-grid {
         grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
         gap: 10px;
@@ -387,6 +437,38 @@ body.loaded {
     .category-item {
         padding: 6px 16px;
         font-size: 13px;
+    }
+    
+    /* 罗大壮餐厅卡片在大屏手机上的调整 */
+    .luo-dazhuang-content {
+        height: 280px !important;
+        padding: 12px !important;
+    }
+    
+    .luo-dazhuang-left p:first-child {
+        font-size: 16px !important;
+    }
+    
+    .luo-dazhuang-left p:last-child {
+        font-size: 28px !important;
+    }
+    
+    .luo-dazhuang-qrcode img {
+        width: 100px !important;
+        height: 100px !important;
+    }
+    
+    .luo-dazhuang-footer p {
+        font-size: 12px !important;
+    }
+    
+    .luo-dazhuang-footer svg {
+        width: 14px !important;
+        height: 14px !important;
+    }
+    
+    .luo-dazhuang-footer div div p {
+        font-size: 11px !important;
     }
 }
 
@@ -404,6 +486,7 @@ body.loaded {
     z-index: 1000;
     opacity: 0;
     transition: opacity 0.3s ease;
+    padding: 20px;
 }
 
 .qr-modal-content {
@@ -412,10 +495,12 @@ body.loaded {
     padding: 30px;
     text-align: center;
     max-width: 300px;
-    width: 80%;
+    width: 100%;
     transform: scale(0.8);
     transition: transform 0.3s ease;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    max-height: 90vh;
+    overflow-y: auto;
 }
 
 .qr-modal-content h3 {
@@ -430,6 +515,7 @@ body.loaded {
     height: 200px;
     border-radius: 8px;
     border: 1px solid #f0f0f0;
+    max-width: 100%;
 }
 
 .qr-modal-content p {
@@ -458,6 +544,67 @@ body.loaded {
     transform: scale(0.95);
 }
 
+/* 罗大壮餐厅特殊弹窗样式 */
+.qr-modal-content.luo-dazhuang-modal {
+    background: #D29966;
+    color: white;
+    max-width: 600px;
+}
+
+/* 移动端响应式设计 */
+@media (max-width: 600px) {
+    .qr-modal-content.luo-dazhuang-modal {
+        max-width: 90%;
+        padding: 20px;
+    }
+    
+    /* 切换为垂直布局 */
+    .qr-modal-content.luo-dazhuang-modal > div:first-child {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    /* 调整桌号大小 */
+    .qr-modal-content.luo-dazhuang-modal div:first-child div:nth-child(2) {
+        font-size: 40px !important;
+        margin: 10px 0;
+    }
+    
+    /* 调整二维码大小 */
+    .qr-modal-content.luo-dazhuang-modal img {
+        width: 200px !important;
+        height: 200px !important;
+    }
+    
+    /* 调整Wi-Fi图标大小 */
+    .qr-modal-content.luo-dazhuang-modal svg {
+        width: 18px !important;
+        height: 18px !important;
+    }
+    
+    /* 调整文本大小 */
+    .qr-modal-content.luo-dazhuang-modal p {
+        font-size: 12px !important;
+    }
+    
+    /* 调整关闭按钮大小 */
+    .qr-modal-content.luo-dazhuang-modal .close-btn {
+        padding: 8px 20px;
+        font-size: 14px;
+    }
+}
+
+.qr-modal-content.luo-dazhuang-modal h3 {
+    color: white;
+    font-size: 28px;
+}
+
+.qr-modal-content.luo-dazhuang-modal img {
+    width: 300px;
+    height: 300px;
+    border: none;
+}
+
 /* 小屏手机 */
 @media (max-width: 480px) {
     .container {
@@ -472,7 +619,14 @@ body.loaded {
         font-size: 13px;
     }
     
-    .table-grid {
+    /* 为罗大壮餐厅在小屏手机上调整网格布局 */
+    .table-grid[data-category="罗大壮"] {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    /* 普通餐厅的网格布局 */
+    .table-grid:not([data-category="罗大壮"]) {
         grid-template-columns: repeat(2, 1fr);
         gap: 10px;
     }
@@ -498,6 +652,51 @@ body.loaded {
         padding: 5px 12px;
         font-size: 12px;
         margin-right: 8px;
+    }
+    
+    /* 罗大壮餐厅卡片在小屏手机上的调整 */
+    .luo-dazhuang-content {
+        height: 260px !important;
+        padding: 10px !important;
+    }
+    
+    .luo-dazhuang-header {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .luo-dazhuang-left p:first-child {
+        font-size: 14px !important;
+    }
+    
+    .luo-dazhuang-left p:last-child {
+        font-size: 24px !important;
+    }
+    
+    .luo-dazhuang-qrcode {
+        padding: 8px !important;
+    }
+    
+    .luo-dazhuang-qrcode img {
+        width: 90px !important;
+        height: 90px !important;
+    }
+    
+    .luo-dazhuang-footer p {
+        font-size: 11px !important;
+    }
+    
+    .luo-dazhuang-footer svg {
+        width: 12px !important;
+        height: 12px !important;
+    }
+    
+    .luo-dazhuang-footer div {
+        gap: 5px;
+    }
+    
+    .luo-dazhuang-footer div div p {
+        font-size: 10px !important;
     }
 }
 
@@ -544,13 +743,44 @@ body.loaded {
         font-size: 18px;
     }
     
-    .table-grid {
+    /* 为罗大壮餐厅在横屏模式下调整网格布局 */
+    .table-grid[data-category="罗大壮"] {
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 10px;
+    }
+    
+    /* 普通餐厅的网格布局 */
+    .table-grid:not([data-category="罗大壮"]) {
         grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
         gap: 8px;
     }
     
     .table-image {
         height: 100px;
+    }
+    
+    /* 罗大壮餐厅卡片在横屏模式下的调整 */
+    .luo-dazhuang-content {
+        height: 220px !important;
+        padding: 8px !important;
+    }
+    
+    .luo-dazhuang-left p:first-child {
+        font-size: 12px !important;
+    }
+    
+    .luo-dazhuang-left p:last-child {
+        font-size: 20px !important;
+    }
+    
+    .luo-dazhuang-qrcode img {
+        width: 80px !important;
+        height: 80px !important;
+    }
+    
+    .luo-dazhuang-footer p,
+    .luo-dazhuang-footer div div p {
+        font-size: 10px !important;
     }
 }
 

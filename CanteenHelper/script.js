@@ -254,11 +254,14 @@ document.addEventListener('DOMContentLoaded', async function() {
     function renderTables(category) {
         tableGrid.innerHTML = '';
         
+        // 使用统一的网格布局
+        tableGrid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(180px, 1fr))';
+        
         if (tableData[category] && tableData[category].length > 0) {
             // 使用延迟添加每个卡片，创建级联效果
             tableData[category].forEach((table, index) => {
                 setTimeout(() => {
-                    const card = createTableCard(table);
+                    const card = createTableCard(table, category);
                     // 添加进入动画
                     card.style.opacity = '0';
                     card.style.transform = 'translateY(20px)';
@@ -298,9 +301,15 @@ document.addEventListener('DOMContentLoaded', async function() {
     function renderFilteredTables(tables) {
         tableGrid.innerHTML = '';
         
+        // 获取当前活动的分类
+        const activeCategory = document.querySelector('.category-item.active').textContent;
+        
+        // 使用统一的网格布局
+        tableGrid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(180px, 1fr))';
+        
         if (tables.length > 0) {
             tables.forEach(table => {
-                const card = createTableCard(table);
+                const card = createTableCard(table, activeCategory);
                 tableGrid.appendChild(card);
             });
         } else {
@@ -316,37 +325,73 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     // 创建餐桌卡片元素
-    function createTableCard(table) {
+    function createTableCard(table, category) {
         const card = document.createElement('div');
-        card.className = 'table-card' + (table.isSpecial ? ' special-card' : '');
         
-        // 生成二维码或活动图片
-        let imagePath;
-        let altText = '';
+        // 检查是否为罗大壮餐厅的餐桌
+        const isLuoDaZhuang = category === '罗大壮';
         
-        if (table.isSpecial) {
-            // 特殊活动使用SVG生成彩色背景
-            const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8'];
-            const randomColor = colors[Math.floor(Math.random() * colors.length)];
-            imagePath = qrGenerator.generateSVGPlaceholder(table.number, randomColor, '#FFFFFF');
-            altText = table.number;
-        } else if (table.url) {
-            // 如果有URL，生成真实的二维码
-            imagePath = qrGenerator.generateQRCode(table.url, 180);
-            altText = '二维码';
+        card.className = 'table-card' + (table.isSpecial ? ' special-card' : '') + (isLuoDaZhuang ? ' luo-dazhuang-card' : '');
+        
+        if (isLuoDaZhuang) {
+            // 罗大壮餐厅的简洁缩略图样式
+            // 生成二维码或活动图片
+            let imagePath;
+            let altText = '';
+            
+            if (table.isSpecial) {
+                // 特殊活动使用SVG生成彩色背景
+                const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8'];
+                const randomColor = colors[Math.floor(Math.random() * colors.length)];
+                imagePath = qrGenerator.generateSVGPlaceholder(table.number, randomColor, '#FFFFFF');
+                altText = table.number;
+            } else if (table.url) {
+                // 如果有URL，生成真实的二维码
+                imagePath = qrGenerator.generateQRCode(table.url, 180);
+                altText = '二维码';
+            } else {
+                // 普通餐桌使用SVG生成灰色背景
+                imagePath = qrGenerator.generateSVGPlaceholder('扫码点餐', '#E8E8E8', '#666666');
+                altText = '扫码点餐';
+            }
+            
+            card.innerHTML = `
+                <img src="${imagePath}" alt="${altText}" class="table-image">
+                <div class="table-info">
+                    <p class="table-number">${table.number}</p>
+                    ${table.url ? '<p class="table-url">点击扫描二维码</p>' : ''}
+                </div>
+            `;
         } else {
-            // 普通餐桌使用SVG生成灰色背景
-            imagePath = qrGenerator.generateSVGPlaceholder('扫码点餐', '#E8E8E8', '#666666');
-            altText = '扫码点餐';
+            // 其他餐厅的默认样式
+            // 生成二维码或活动图片
+            let imagePath;
+            let altText = '';
+            
+            if (table.isSpecial) {
+                // 特殊活动使用SVG生成彩色背景
+                const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8'];
+                const randomColor = colors[Math.floor(Math.random() * colors.length)];
+                imagePath = qrGenerator.generateSVGPlaceholder(table.number, randomColor, '#FFFFFF');
+                altText = table.number;
+            } else if (table.url) {
+                // 如果有URL，生成真实的二维码
+                imagePath = qrGenerator.generateQRCode(table.url, 180);
+                altText = '二维码';
+            } else {
+                // 普通餐桌使用SVG生成灰色背景
+                imagePath = qrGenerator.generateSVGPlaceholder('扫码点餐', '#E8E8E8', '#666666');
+                altText = '扫码点餐';
+            }
+            
+            card.innerHTML = `
+                <img src="${imagePath}" alt="${altText}" class="table-image">
+                <div class="table-info">
+                    <p class="table-number">${table.number}</p>
+                    ${table.url ? '<p class="table-url">点击扫描二维码</p>' : ''}
+                </div>
+            `;
         }
-        
-        card.innerHTML = `
-            <img src="${imagePath}" alt="${altText}" class="table-image">
-            <div class="table-info">
-                <p class="table-number">${table.number}</p>
-                ${table.url ? '<p class="table-url">点击扫描二维码</p>' : ''}
-            </div>
-        `;
         
         // 添加点击事件
         card.addEventListener('click', function() {
@@ -359,7 +404,12 @@ document.addEventListener('DOMContentLoaded', async function() {
                     alert(`您点击了特殊活动: ${table.number}`);
                 } else if (table.url) {
                     // 如果有URL，显示二维码弹窗
-                    showQRCodeModal(table);
+                    // 对于罗大壮餐厅，我们可以使用特殊的弹窗样式
+                    if (isLuoDaZhuang) {
+                        showQRCodeModal(table, true);
+                    } else {
+                        showQRCodeModal(table);
+                    }
                 } else {
                     alert(`您选择了餐桌: ${table.number}\n即将进入扫码点餐页面...`);
                 }
@@ -369,35 +419,43 @@ document.addEventListener('DOMContentLoaded', async function() {
         // 添加触摸反馈（针对移动设备）
         if ('ontouchstart' in window) {
             card.addEventListener('touchstart', function() {
-                this.style.transform = 'scale(0.98)';
+                if (this) {
+                    this.style.transform = 'scale(0.98)';
+                }
             });
             card.addEventListener('touchend', function() {
-                this.style.transform = 'scale(1)';
+                if (this) {
+                    this.style.transform = 'scale(1)';
+                }
             });
             card.addEventListener('touchmove', function() {
-                this.style.transform = 'scale(1)';
+                if (this) {
+                    this.style.transform = 'scale(1)';
+                }
             });
         }
         
         // 添加轻微的加载动画
         const img = card.querySelector('.table-image');
-        img.style.opacity = '0';
-        img.style.transition = 'opacity 0.5s ease';
-        img.onload = function() {
-            this.style.opacity = '1';
-        };
-        
-        // 图片加载失败时的处理
-        img.onerror = function() {
-            this.src = `https://via.placeholder.com/180x180?text=${encodeURIComponent('加载失败')}&bg=E8E8E8&text=FF6B6B`;
-            this.style.opacity = '1';
-        };
+        if (img) {
+            img.style.opacity = '0';
+            img.style.transition = 'opacity 0.5s ease';
+            img.onload = function() {
+                this.style.opacity = '1';
+            };
+            
+            // 图片加载失败时的处理
+            img.onerror = function() {
+                this.src = `https://via.placeholder.com/180x180?text=${encodeURIComponent('加载失败')}&bg=E8E8E8&text=FF6B6B`;
+                this.style.opacity = '1';
+            };
+        }
         
         return card;
     }
 
     // 显示二维码弹窗
-    function showQRCodeModal(table) {
+    function showQRCodeModal(table, isLuoDaZhuang = false) {
         // 创建弹窗容器
         const modal = document.createElement('div');
         modal.className = 'qr-modal';
@@ -416,35 +474,80 @@ document.addEventListener('DOMContentLoaded', async function() {
             transition: opacity 0.3s ease;
         `;
 
-        // 创建弹窗内容
-        modal.innerHTML = `
-            <div class="qr-modal-content" style="
-                background: white;
-                border-radius: 12px;
-                padding: 30px;
-                text-align: center;
-                max-width: 300px;
-                width: 80%;
-                transform: scale(0.8);
-                transition: transform 0.3s ease;
-            ">
-                <h3 style="margin-bottom: 20px; color: #333;">${table.number}</h3>
-                <img src="${qrGenerator.generateQRCode(table.url, 200)}" 
-                     alt="二维码" 
-                     style="width: 200px; height: 200px; border-radius: 8px;">
-                <p style="margin-top: 15px; color: #666; font-size: 14px;">扫描二维码访问</p>
-                <button class="close-btn" style="
-                    margin-top: 20px;
-                    padding: 8px 20px;
-                    background: #1890ff;
-                    color: white;
-                    border: none;
-                    border-radius: 6px;
-                    cursor: pointer;
-                    font-size: 14px;
-                ">关闭</button>
-            </div>
-        `;
+        if (isLuoDaZhuang) {
+            // 罗大壮餐厅的特殊弹窗样式
+            const qrCodePath = qrGenerator.generateQRCode(table.url, 250);
+            
+            modal.innerHTML = `
+                <div class="qr-modal-content luo-dazhuang-modal">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+                        <div>
+                            <div style="background-color: #C37A3E; color: white; padding: 8px 15px; border-radius: 15px 0 0 15px; position: relative; display: inline-block; margin-bottom: 15px; font-size: 18px; font-weight: bold;">
+                                扫码点餐
+                                <div style="width: 0; height: 0; border-top: 8px solid transparent; border-bottom: 8px solid transparent; border-left: 8px solid #C37A3E; position: absolute; right: -8px; top: 50%; transform: translateY(-50%);"></div>
+                            </div>
+                            <div style="font-size: 60px; margin: 0; color: white; font-weight: 900; letter-spacing: 3px;">${table.number}</div>
+                        </div>
+                        <div style="background: white; padding: 8px; border-radius: 8px;">
+                            <img src="${qrCodePath}" 
+                                 alt="二维码" 
+                                 style="width: 250px; height: 250px;">
+                        </div>
+                    </div>
+                    <p style="margin: 0 0 20px 0; font-size: 14px; color: white; text-align: center;">免费现熬红枣茶、小菜</p>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="white" viewBox="0 0 24 24">
+                            <path d="M12 6c3.87 0 7 3.13 7 7 0 1.93-.79 3.68-2 4.9V19h-2v-2.1a4.99 4.99 0 0 1-1-1.9c0-2.76-2.24-5-5-5s-5 2.24-5 5c0 .85.19 1.66.5 2.4L7 17.1v2.9h-2v-2.9c-1.21-1.22-2-2.97-2-4.9 0-3.87 3.13-7 7-7zm0 2c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zm0 8c-1.65 0-3-1.35-3-3s1.35-3 3-3 3 1.35 3 3-1.35 3-3 3z"/>
+                        </svg>
+                        <div style="color: white;">
+                            <div style="font-size: 14px;">账号: 罗大壮牛肉面</div>
+                            <div style="font-size: 14px;">密码: 88888888</div>
+                        </div>
+                    </div>
+                    <button class="close-btn" style="
+                        margin-top: 25px;
+                        padding: 10px 30px;
+                        background: white;
+                        color: #D29966;
+                        border: none;
+                        border-radius: 6px;
+                        cursor: pointer;
+                        font-size: 16px;
+                        font-weight: 500;
+                    ">关闭</button>
+                </div>
+            `;
+        } else {
+            // 默认弹窗样式
+            modal.innerHTML = `
+                <div class="qr-modal-content" style="
+                    background: white;
+                    border-radius: 12px;
+                    padding: 30px;
+                    text-align: center;
+                    max-width: 300px;
+                    width: 80%;
+                    transform: scale(0.8);
+                    transition: transform 0.3s ease;
+                ">
+                    <h3 style="margin-bottom: 20px; color: #333;">${table.number}</h3>
+                    <img src="${qrGenerator.generateQRCode(table.url, 200)}" 
+                         alt="二维码" 
+                         style="width: 200px; height: 200px; border-radius: 8px;">
+                    <p style="margin-top: 15px; color: #666; font-size: 14px;">扫描二维码访问</p>
+                    <button class="close-btn" style="
+                        margin-top: 20px;
+                        padding: 8px 20px;
+                        background: #1890ff;
+                        color: white;
+                        border: none;
+                        border-radius: 6px;
+                        cursor: pointer;
+                        font-size: 14px;
+                    ">关闭</button>
+                </div>
+            `;
+        }
 
         // 添加到页面
         document.body.appendChild(modal);
